@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -204,7 +205,7 @@ func (c *servercowDNSProviderSolver) getUsernamePassword(cfg *servercowDNSProvid
 
 	klog.V(6).Infof("try to load secret `%s` with key `%s`", secretName, cfg.APIKeySecretRef.Key)
 
-	sec, err := c.client.CoreV1().Secrets(namespace).Get(secretName, metav1.GetOptions{})
+	sec, err := c.client.CoreV1().Secrets(namespace).Get(context.Background() ,secretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to get secret `%s`; %v", secretName, err)
 	}
