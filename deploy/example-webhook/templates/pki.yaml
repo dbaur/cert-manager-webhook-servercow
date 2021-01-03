@@ -4,11 +4,11 @@
 apiVersion: cert-manager.io/v1alpha3
 kind: Issuer
 metadata:
-  name: {{ include "example-webhook.selfSignedIssuer" . }}
+  name: {{ include "servercow-webhook.selfSignedIssuer" . }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
-    app: {{ include "example-webhook.name" . }}
-    chart: {{ include "example-webhook.chart" . }}
+    app: {{ include "servercow-webhook.name" . }}
+    chart: {{ include "servercow-webhook.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
@@ -20,18 +20,18 @@ spec:
 apiVersion: cert-manager.io/v1alpha3
 kind: Certificate
 metadata:
-  name: {{ include "example-webhook.rootCACertificate" . }}
+  name: {{ include "servercow-webhook.rootCACertificate" . }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
-    app: {{ include "example-webhook.name" . }}
-    chart: {{ include "example-webhook.chart" . }}
+    app: {{ include "servercow-webhook.name" . }}
+    chart: {{ include "servercow-webhook.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
-  secretName: {{ include "example-webhook.rootCACertificate" . }}
+  secretName: {{ include "servercow-webhook.rootCACertificate" . }}
   duration: 43800h # 5y
   issuerRef:
-    name: {{ include "example-webhook.selfSignedIssuer" . }}
+    name: {{ include "servercow-webhook.selfSignedIssuer" . }}
   commonName: "ca.example-webhook.cert-manager"
   isCA: true
 
@@ -41,16 +41,16 @@ spec:
 apiVersion: cert-manager.io/v1alpha3
 kind: Issuer
 metadata:
-  name: {{ include "example-webhook.rootCAIssuer" . }}
+  name: {{ include "servercow-webhook.rootCAIssuer" . }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
-    app: {{ include "example-webhook.name" . }}
-    chart: {{ include "example-webhook.chart" . }}
+    app: {{ include "servercow-webhook.name" . }}
+    chart: {{ include "servercow-webhook.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
   ca:
-    secretName: {{ include "example-webhook.rootCACertificate" . }}
+    secretName: {{ include "servercow-webhook.rootCACertificate" . }}
 
 ---
 
