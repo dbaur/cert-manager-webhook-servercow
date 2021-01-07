@@ -2,11 +2,44 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: {{ include "servercow-webhook.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: {{ include "servercow-webhook.name" . }}
     chart: {{ include "servercow-webhook.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
+---
+# Grant the webhook to watch flowcontrol
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "servercow-webhook.fullname" . }}:flowcontrol
+rules:
+  - apiGroups: ["flowcontrol.apiserver.k8s.io"]
+    resources: ["prioritylevelconfigurations"]
+    verbs: ["list", "watch"]
+  - apiGroups: ["flowcontrol.apiserver.k8s.io"]
+    resources: ["flowschemas"]
+    verbs: ["list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "servercow-webhook.fullname" . }}:flowcontrol
+  labels:
+    app: {{ include "servercow-webhook.name" . }}
+    chart: {{ include "servercow-webhook.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "servercow-webhook.fullname" . }}:flowcontrol
+subjects:
+  - apiGroup: ""
+    kind: ServiceAccount
+    name: {{ include "servercow-webhook.fullname" . }}
+    namespace: {{ .Release.Namespace }}
 ---
 # Grant the webhook permission to read the ConfigMap containing the Kubernetes
 # apiserver's requestheader-ca-certificate.
@@ -28,7 +61,7 @@ roleRef:
 subjects:
   - apiGroup: ""
     kind: ServiceAccount
-    name: {{ include "servercow-webhookfullname" . }}
+    name: {{ include "servercow-webhook.fullname" . }}
     namespace: {{ .Release.Namespace }}
 ---
 # apiserver gets the auth-delegator role to delegate auth decisions to
@@ -88,3 +121,32 @@ subjects:
     kind: ServiceAccount
     name: {{ .Values.certManager.serviceAccountName }}
     namespace: {{ .Values.certManager.namespace }}
+---
+# Role and RoleBinding for servercow-credentials
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "servercow-webhook.fullname" . }}:secret-reader
+  namespace: {{ .Release.Namespace }}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: [
+      {{ include "servercow-webhook.fullname" . }}-secret
+    ]
+    verbs: ["get", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "servercow-webhook.fullname" . }}:secret-reader
+  namespace: {{ .Release.Namespace }}
+subjects:
+  - apiGroup: ""
+    kind: ServiceAccount
+    name: {{ include "servercow-webhook.fullname" . }}
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: {{ include "servercow-webhook.fullname" . }}:secret-reader
+  apiGroup: rbac.authorization.k8s.io

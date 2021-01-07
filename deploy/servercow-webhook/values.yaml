@@ -13,7 +13,7 @@ certManager:
   serviceAccountName: cert-manager
 
 image:
-  repository: dbaur/servercow-webhook
+  repository: dbaur/cert-manager-webhook-servercow
   tag: latest
   pullPolicy: IfNotPresent
 
@@ -23,6 +23,10 @@ fullnameOverride: ""
 service:
   type: ClusterIP
   port: 443
+
+secret:
+  username: ""
+  password: ""
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious

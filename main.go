@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"os"
+	"strings"
 
 	cmmeta "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
 	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -13,9 +13,9 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/klog"
 
+	"github.com/go-acme/lego/v4/providers/dns/servercow"
 	"github.com/jetstack/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
 	"github.com/jetstack/cert-manager/pkg/acme/webhook/cmd"
-	"github.com/go-acme/lego/v4/providers/dns/servercow"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -70,7 +70,7 @@ type servercowDNSProviderConfig struct {
 	// These fields will be set by users in the
 	// `issuer.spec.acme.dns01.providers.webhook.config` field.
 
-	Email           string `json:"email"`
+	Namespace       string                   `json:"namespace"`
 	APIKeySecretRef cmmeta.SecretKeySelector `json:"apiKeySecretRef"`
 }
 
@@ -90,13 +90,16 @@ func (c *servercowDNSProviderSolver) Name() string {
 // cert-manager itself will later perform a self check to ensure that the
 // solver has correctly configured the DNS provider.
 func (c *servercowDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
+
+	klog.V(6).Infof("Presented with new challenge `%s`", ch)
+
 	cfg, err := loadConfig(ch.Config)
 	if err != nil {
 		return err
 	}
 
 	// TODO: do something more useful with the decoded configuration
-	fmt.Printf("Decoded configuration %v", cfg)
+	klog.V(6).Infof("Decoded configuration `%s`", cfg)
 
 	// TODO: add code that sets a record in the DNS provider's console
 	sc, err := c.getServercowClient(ch)
@@ -146,11 +149,12 @@ func (c *servercowDNSProviderSolver) Initialize(kubeClientConfig *rest.Config, s
 	///// UNCOMMENT THE BELOW CODE TO MAKE A KUBERNETES CLIENTSET AVAILABLE TO
 	///// YOUR CUSTOM DNS PROVIDER
 
+	klog.V(6).Infof("Initializing the DNS Solver for Servercow")
+
 	cl, err := kubernetes.NewForConfig(kubeClientConfig)
 	if err != nil {
 		return err
 	}
-
 
 	c.client = cl
 
@@ -165,7 +169,7 @@ func (c *servercowDNSProviderSolver) getServercowClient(ch *v1alpha1.ChallengeRe
 		return nil, err
 	}
 
-	username, password, err := c.getUsernamePassword(&cfg, ch.ResourceNamespace)
+	username, password, err := c.getUsernamePassword(&cfg, &cfg.Namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +184,6 @@ func (c *servercowDNSProviderSolver) getServercowClient(ch *v1alpha1.ChallengeRe
 	}
 
 	return dnsProvider, nil
-
 
 }
 
@@ -199,13 +202,13 @@ func loadConfig(cfgJSON *extapi.JSON) (servercowDNSProviderConfig, error) {
 	return cfg, nil
 }
 
-// Get Gandi API key from Kubernetes secret.
-func (c *servercowDNSProviderSolver) getUsernamePassword(cfg *servercowDNSProviderConfig, namespace string) (*string, *string, error) {
+// Get Servercow Credentials from Kubernetes secret.
+func (c *servercowDNSProviderSolver) getUsernamePassword(cfg *servercowDNSProviderConfig, namespace *string) (*string, *string, error) {
 	secretName := cfg.APIKeySecretRef.LocalObjectReference.Name
 
 	klog.V(6).Infof("try to load secret `%s` with key `%s`", secretName, cfg.APIKeySecretRef.Key)
 
-	sec, err := c.client.CoreV1().Secrets(namespace).Get(context.Background() ,secretName, metav1.GetOptions{})
+	sec, err := c.client.CoreV1().Secrets(*namespace).Get(context.Background(), secretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to get secret `%s`; %v", secretName, err)
 	}
@@ -225,8 +228,6 @@ func (c *servercowDNSProviderSolver) getUsernamePassword(cfg *servercowDNSProvid
 	}
 
 	password := string(passwordBytes)
-
-
 
 	return &username, &password, nil
 }

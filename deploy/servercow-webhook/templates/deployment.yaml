@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "servercow-webhook.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: {{ include "servercow-webhook.name" . }}
     chart: {{ include "servercow-webhook.chart" . }}
