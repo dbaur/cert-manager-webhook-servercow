@@ -15,7 +15,7 @@ certManager:
 image:
   repository: dbaur/cert-manager-webhook-servercow
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 nameOverride: ""
 fullnameOverride: ""

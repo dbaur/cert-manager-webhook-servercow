@@ -4,19 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"strings"
-
-	cmmeta "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
-	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/klog"
-
 	"github.com/go-acme/lego/v4/providers/dns/servercow"
 	"github.com/jetstack/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
 	"github.com/jetstack/cert-manager/pkg/acme/webhook/cmd"
+	cmmeta "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
+	"github.com/jetstack/cert-manager/pkg/issuer/acme/dns/util"
+	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"os"
 )
 
 var GroupName = os.Getenv("GROUP_NAME")
@@ -91,23 +88,21 @@ func (c *servercowDNSProviderSolver) Name() string {
 // solver has correctly configured the DNS provider.
 func (c *servercowDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 
-	klog.V(6).Infof("Presented with new challenge `%s`", ch)
+	fmt.Printf("Presented with new challenge %s", ch)
 
 	cfg, err := loadConfig(ch.Config)
 	if err != nil {
 		return err
 	}
 
-	// TODO: do something more useful with the decoded configuration
-	klog.V(6).Infof("Decoded configuration `%s`", cfg)
+	fmt.Printf("Decoded configuration %v", cfg)
 
-	// TODO: add code that sets a record in the DNS provider's console
 	sc, err := c.getServercowClient(ch)
 	if err != nil {
 		return err
 	}
 
-	domain, _ := c.getDomainAndEntry(ch)
+	domain, _ := c.getZone(ch.ResolvedZone)
 
 	err = sc.Present(domain, "", ch.Key)
 	if err != nil {
@@ -117,12 +112,13 @@ func (c *servercowDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) erro
 	return nil
 }
 
-func (c *servercowDNSProviderSolver) getDomainAndEntry(ch *v1alpha1.ChallengeRequest) (string, string) {
-	// Both ch.ResolvedZone and ch.ResolvedFQDN end with a dot: '.'
-	entry := strings.TrimSuffix(ch.ResolvedFQDN, ch.ResolvedZone)
-	entry = strings.TrimSuffix(entry, ".")
-	domain := strings.TrimSuffix(ch.ResolvedZone, ".")
-	return entry, domain
+func (c *servercowDNSProviderSolver) getZone(fqdn string) (string, error) {
+	authZone, err := util.FindZoneByFqdn(fqdn, util.RecursiveNameservers)
+	if err != nil {
+		return "", err
+	}
+
+	return util.UnFqdn(authZone), nil
 }
 
 // CleanUp should delete the relevant TXT record from the DNS provider console.
@@ -149,7 +145,7 @@ func (c *servercowDNSProviderSolver) Initialize(kubeClientConfig *rest.Config, s
 	///// UNCOMMENT THE BELOW CODE TO MAKE A KUBERNETES CLIENTSET AVAILABLE TO
 	///// YOUR CUSTOM DNS PROVIDER
 
-	klog.V(6).Infof("Initializing the DNS Solver for Servercow")
+	fmt.Print("Initializing the DNS Solver for Servercow")
 
 	cl, err := kubernetes.NewForConfig(kubeClientConfig)
 	if err != nil {
@@ -206,7 +202,7 @@ func loadConfig(cfgJSON *extapi.JSON) (servercowDNSProviderConfig, error) {
 func (c *servercowDNSProviderSolver) getUsernamePassword(cfg *servercowDNSProviderConfig, namespace *string) (*string, *string, error) {
 	secretName := cfg.APIKeySecretRef.LocalObjectReference.Name
 
-	klog.V(6).Infof("try to load secret `%s` with key `%s`", secretName, cfg.APIKeySecretRef.Key)
+	fmt.Printf("try to load secret %s with key %s", secretName, cfg.APIKeySecretRef.Key)
 
 	sec, err := c.client.CoreV1().Secrets(*namespace).Get(context.Background(), secretName, metav1.GetOptions{})
 	if err != nil {
