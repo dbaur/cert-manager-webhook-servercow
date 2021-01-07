@@ -102,9 +102,9 @@ func (c *servercowDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) erro
 		return err
 	}
 
-	domain, _ := c.getZone(ch.ResolvedZone)
+	//domain, _ := c.getZone(ch.ResolvedZone)
 
-	err = sc.Present(domain, "", ch.Key)
+	err = sc.Present(ch.ResolvedZone, "", ch.Key)
 	if err != nil {
 		return err
 	}
