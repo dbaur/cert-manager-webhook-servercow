@@ -9,3 +9,5 @@ require (
 	k8s.io/apimachinery v0.20.1
 	k8s.io/client-go v0.20.1
 )
+
+replace github.com/go-acme/lego/v4 => github.com/dbaur/lego/v4 v4.1.3-dbaur

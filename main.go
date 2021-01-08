@@ -90,13 +90,6 @@ func (c *servercowDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) erro
 
 	fmt.Printf("Presented with new challenge %s", ch)
 
-	cfg, err := loadConfig(ch.Config)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("Decoded configuration %v", cfg)
-
 	sc, err := c.getServercowClient(ch)
 	if err != nil {
 		return err
@@ -104,7 +97,7 @@ func (c *servercowDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) erro
 
 	//domain, _ := c.getZone(ch.ResolvedZone)
 
-	err = sc.Present(ch.DNSName, "", ch.Key)
+	err = sc.Present(ch.DNSName, ch.Key, "")
 	if err != nil {
 		return err
 	}
@@ -129,6 +122,16 @@ func (c *servercowDNSProviderSolver) getZone(fqdn string) (string, error) {
 // concurrently.
 func (c *servercowDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 	// TODO: add code that deletes a record from the DNS provider's console
+
+	sc, err := c.getServercowClient(ch)
+	if err != nil {
+		return err
+	}
+	err = sc.CleanUp(ch.DNSName, ch.Key, "")
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
